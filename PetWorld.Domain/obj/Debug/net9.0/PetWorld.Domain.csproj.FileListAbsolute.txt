@@ -1,0 +1,11 @@
+C:\Users\zalew\OneDrive\Pulpit\PetWorld\PetWorld.Domain\bin\Debug\net9.0\PetWorld.Domain.deps.json
+C:\Users\zalew\OneDrive\Pulpit\PetWorld\PetWorld.Domain\bin\Debug\net9.0\PetWorld.Domain.dll
+C:\Users\zalew\OneDrive\Pulpit\PetWorld\PetWorld.Domain\bin\Debug\net9.0\PetWorld.Domain.pdb
+C:\Users\zalew\OneDrive\Pulpit\PetWorld\PetWorld.Domain\obj\Debug\net9.0\PetWorld.Domain.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\zalew\OneDrive\Pulpit\PetWorld\PetWorld.Domain\obj\Debug\net9.0\PetWorld.Domain.AssemblyInfoInputs.cache
+C:\Users\zalew\OneDrive\Pulpit\PetWorld\PetWorld.Domain\obj\Debug\net9.0\PetWorld.Domain.AssemblyInfo.cs
+C:\Users\zalew\OneDrive\Pulpit\PetWorld\PetWorld.Domain\obj\Debug\net9.0\PetWorld.Domain.csproj.CoreCompileInputs.cache
+C:\Users\zalew\OneDrive\Pulpit\PetWorld\PetWorld.Domain\obj\Debug\net9.0\PetWorld.Domain.dll
+C:\Users\zalew\OneDrive\Pulpit\PetWorld\PetWorld.Domain\obj\Debug\net9.0\refint\PetWorld.Domain.dll
+C:\Users\zalew\OneDrive\Pulpit\PetWorld\PetWorld.Domain\obj\Debug\net9.0\PetWorld.Domain.pdb
+C:\Users\zalew\OneDrive\Pulpit\PetWorld\PetWorld.Domain\obj\Debug\net9.0\ref\PetWorld.Domain.dll

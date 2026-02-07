@@ -1,0 +1,87 @@
+@page "/products"
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using PetWorld.Domain.Entities
+@using PetWorld.Infrastructure.Persistence
+@inject AppDbContext Db
+
+<div class="container mt-4 mb-4">
+    <div class="page-header-section mb-5">
+        <h1 class="display-5 fw-bold">🛍️ Nasz katalog produktów</h1>
+        <p class="lead text-muted">Wszystkie produkty dostępne dla Twoich zwierzątek</p>
+    </div>
+
+    @if (products == null)
+    {
+        <div class="alert alert-info border-0 shadow-sm">
+            <span class="spinner-border spinner-border-sm me-2"></span>
+            <span>Ładowanie produktów...</span>
+        </div>
+    }
+    else if (products.Count == 0)
+    {
+        <div class="alert alert-warning border-0 shadow-sm text-center py-5">
+            <span style="font-size: 2em; display: block; margin-bottom: 10px;">🚫</span>
+            <span>Brak dostępnych produktów w katalogu.</span>
+        </div>
+    }
+    else
+    {
+        <div class="products-stats mb-4 p-4 bg-light rounded-3 border">
+            <div class="row text-center">
+                <div class="col-md-6">
+                    <h6 class="text-muted mb-1">Całkowita liczba produktów</h6>
+                    <h4 class="text-primary fw-bold">@products.Count</h4>
+                </div>
+                <div class="col-md-6">
+                    <h6 class="text-muted mb-1">Kategorie</h6>
+                    <h4 class="text-success fw-bold">@products.Select(p => p.Category).Distinct().Count()</h4>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row g-4">
+            @foreach (var product in products.GroupBy(p => p.Category))
+            {
+                <div class="col-12">
+                    <h5 class="mb-3 mt-2 text-uppercase fw-bold text-muted">
+                        <span class="category-badge">@product.Key</span>
+                    </h5>
+                    
+                    <div class="products-grid">
+                        @foreach (var item in product)
+                        {
+                            <NavLink class="text-decoration-none" href="@($"/products/{item.Id}")">
+                                <div class="product-card shadow-sm">
+                                    <div class="product-card-content">
+                                        <div class="product-header">
+                                            <h6 class="product-name">@item.Name</h6>
+                                            <span class="product-price">@item.Price.ToString("0.00") zł</span>
+                                        </div>
+                                        <p class="product-description">@item.Description</p>
+                                        <div class="product-footer">
+                                            <span class="category-tag">@item.Category</span>
+                                            <span class="text-primary fw-semibold">Zobacz →</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </NavLink>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private List<Product>? products;
+
+    protected override async Task OnInitializedAsync()
+    {
+        products = await Db.Products
+            .AsNoTracking()
+            .OrderBy(x => x.Name)
+            .ToListAsync();
+    }
+}

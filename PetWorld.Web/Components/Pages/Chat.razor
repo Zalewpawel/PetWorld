@@ -1,0 +1,203 @@
+@page "/"
+@page "/chat"
+@rendermode InteractiveServer
+@using PetWorld.Application.Services
+@using PetWorld.Domain.Entities
+@using System.Net
+@using System.Text
+@using System.Text.RegularExpressions
+@inject IChatService ChatService
+
+<div class="container mt-4 mb-4">
+    <div class="page-header-section mb-5">
+        <h1 class="display-5 fw-bold">🐾 Chat z Asystentem</h1>
+        <p class="lead text-muted">Zapytaj nas o cokolwiek dotyczącego naszych zwierząt i produktów</p>
+    </div>
+    
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="card shadow-lg chat-input-card">
+                <div class="card-header bg-gradient border-0">
+                    <h5 class="mb-0">💬 Twoje pytanie</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="questionInput" class="form-label fw-500">Co chciałbyś wiedzieć?</label>
+                        <textarea class="form-control form-control-lg chat-textarea" id="questionInput" @bind="question" rows="4" placeholder="Wpisz pytanie tutaj... np. jakie produkty polecacie dla szczeniąt?"></textarea>
+                        <small class="text-muted d-block mt-2">Nasz AI asystent przeanalizuje pytanie i da Ci najlepszą odpowiedź.</small>
+                    </div>
+                    
+                    <button class="btn btn-primary btn-lg w-100 send-button" @onclick="SendMessage" disabled="@isLoading">
+                        @if (isLoading)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                            <span>Przetwarzanie...</span>
+                        }
+                        else
+                        {
+                            <span>✉️ Wyślij pytanie</span>
+                        }
+                    </button>
+                </div>
+            </div>
+
+            @if (currentMessage != null)
+            {
+                <div class="card shadow-lg response-card">
+                    <div class="card-header bg-gradient-success border-0">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">✨ Odpowiedź Asystenta</h5>
+                            <small class="text-muted badge bg-light text-dark">📅 @FormatPolandTime(currentMessage.CreatedAt)</small>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="response-section mb-4">
+                            <h6 class="text-muted fw-bold text-uppercase">📌 Twoje pytanie</h6>
+                            <div class="question-box">
+                                @currentMessage.Question
+                            </div>
+                        </div>
+                        
+                        <div class="response-section mb-4">
+                            <h6 class="text-muted fw-bold text-uppercase">💡 Odpowiedź</h6>
+                            <div class="answer-box">
+                                @RenderAnswer(currentMessage.Answer)
+                            </div>
+                        </div>
+                        
+                        <div class="alert alert-success border-0 shadow-sm">
+                            <div class="d-flex align-items-center">
+                                <span style="font-size: 1.5em; margin-right: 10px;">⚙️</span>
+                                <div>
+                                    <strong>Liczba iteracji weryfikacji:</strong> 
+                                    <span class="badge bg-success ms-2">@currentMessage.IterationCount</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        @if (currentMessage.Answer?.Contains("[Agent Log]") == true)
+                        {
+                            <div class="card mt-4 agent-log-card">
+                                <div class="card-header bg-dark text-white border-0">
+                                    <h6 class="mb-0">🔍 Jak pracował nasz AI?</h6>
+                                    <small class="text-light">Historia komunikacji agentów Writer i Critic</small>
+                                </div>
+                                <div class="card-body agent-log-body">
+                                    <pre style="background-color: #1e1e1e; color: #d4d4d4; padding: 15px; border-radius: 6px; font-size: 12px; max-height: 350px; overflow-y: auto; font-family: 'Courier New', monospace;">@{
+                                        var logPart = currentMessage.Answer?.Split("\n---\n[Agent Log]\n");
+                                        if (logPart?.Length > 1)
+                                        {
+                                            @logPart[1]
+                                        }
+                                    }</pre>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+            else if (showNoResultsMessage)
+            {
+                <div class="alert alert-info border-0 shadow-sm" role="alert">
+                    <span style="font-size: 1.2em; margin-right: 10px;">💬</span>
+                    <span>Prześlij pytanie powyżej, aby otrzymać odpowiedź od naszego asystenta AI</span>
+                </div>
+            }
+        </div>
+
+    </div>
+</div>
+
+@code {
+    private string question = "";
+    private ChatMessage? currentMessage = null;
+    private bool isLoading = false;
+    private bool showNoResultsMessage = false;
+
+    private static readonly TimeZoneInfo PolandTimeZone = GetPolandTimeZone();
+
+    private async Task SendMessage()
+    {
+        if (string.IsNullOrWhiteSpace(question))
+        {
+            return;
+        }
+
+        isLoading = true;
+        showNoResultsMessage = false;
+
+        try
+        {
+            currentMessage = await ChatService.SendMessageAsync(question);
+            question = "";
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private static TimeZoneInfo GetPolandTimeZone()
+    {
+        try
+        {
+            return TimeZoneInfo.FindSystemTimeZoneById("Europe/Warsaw");
+        }
+        catch (TimeZoneNotFoundException)
+        {
+            return TimeZoneInfo.FindSystemTimeZoneById("Central European Standard Time");
+        }
+    }
+
+    private static string FormatPolandTime(DateTime dateTime)
+    {
+        var utc = dateTime.Kind == DateTimeKind.Utc
+            ? dateTime
+            : DateTime.SpecifyKind(dateTime, DateTimeKind.Utc);
+
+        var local = TimeZoneInfo.ConvertTimeFromUtc(utc, PolandTimeZone);
+        return local.ToString("dd.MM.yyyy HH:mm:ss");
+    }
+
+    private static MarkupString RenderAnswer(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return new MarkupString(string.Empty);
+        }
+
+        var content = text.Split("\n---")[0].Replace("\r\n", "\n");
+        var regex = new Regex(@"\[(?<label>[^\]]+)\]\(/products/(?<id>\d+)\)", RegexOptions.Compiled);
+
+        var sb = new StringBuilder();
+        var lastIndex = 0;
+
+        foreach (Match match in regex.Matches(content))
+        {
+            if (match.Index > lastIndex)
+            {
+                var chunk = content.Substring(lastIndex, match.Index - lastIndex);
+                sb.Append(WebUtility.HtmlEncode(chunk));
+            }
+
+            var label = WebUtility.HtmlEncode(match.Groups["label"].Value);
+            var id = match.Groups["id"].Value;
+            sb.Append($"<a href=\"/products/{id}\">{label}</a>");
+
+            lastIndex = match.Index + match.Length;
+        }
+
+        if (lastIndex < content.Length)
+        {
+            sb.Append(WebUtility.HtmlEncode(content.Substring(lastIndex)));
+        }
+
+        var html = sb.ToString().Replace("\n", "<br />");
+        return new MarkupString(html);
+    }
+
+}

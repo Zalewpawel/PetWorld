@@ -1,0 +1,65 @@
+@page "/products/{Id:int}"
+@rendermode InteractiveServer
+@using PetWorld.Application.Services
+@using PetWorld.Domain.Entities
+@inject IProductService ProductService
+
+<div class="container mt-4 mb-4">
+    <div class="page-header-section mb-4">
+        <h1 class="display-6 fw-bold">🛍️ Szczegóły produktu</h1>
+        <p class="text-muted">Informacje o wybranym produkcie</p>
+    </div>
+
+    @if (product == null && !isLoaded)
+    {
+        <div class="alert alert-info border-0 shadow-sm">
+            <span class="spinner-border spinner-border-sm me-2"></span>
+            <span>Ładowanie produktu...</span>
+        </div>
+    }
+    else if (product == null)
+    {
+        <div class="alert alert-warning border-0 shadow-sm">
+            Nie znaleziono produktu.
+        </div>
+    }
+    else
+    {
+        <div class="card shadow-lg">
+            <div class="card-header bg-gradient border-0">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">@product.Name</h5>
+                    <span class="badge bg-light text-dark">@product.Category</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-3">
+                    <div class="product-price">@product.Price.ToString("0.00") zł</div>
+                </div>
+
+                <div class="response-section">
+                    <h6 class="text-muted fw-bold text-uppercase">Opis</h6>
+                    <div class="answer-box">@product.Description</div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <div class="mt-4">
+        <NavLink class="btn btn-outline-primary" href="/products">← Wróć do produktów</NavLink>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private Product? product;
+    private bool isLoaded;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        product = await ProductService.GetProductByIdAsync(Id);
+        isLoaded = true;
+    }
+}

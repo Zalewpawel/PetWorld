@@ -1,0 +1,152 @@
+@page "/history/{Id:int}"
+@rendermode InteractiveServer
+@using PetWorld.Application.Services
+@using PetWorld.Domain.Entities
+@using System.Net
+@using System.Text
+@using System.Text.RegularExpressions
+@inject IChatService ChatService
+
+<div class="container mt-4 mb-4">
+    <div class="page-header-section mb-4">
+        <h1 class="display-6 fw-bold">📝 Szczegóły wiadomości</h1>
+        <p class="text-muted">Podgląd pełnej treści rozmowy</p>
+    </div>
+
+    @if (message == null && !isLoaded)
+    {
+        <div class="alert alert-info border-0 shadow-sm">
+            <span class="spinner-border spinner-border-sm me-2"></span>
+            <span>Ładowanie wiadomości...</span>
+        </div>
+    }
+    else if (message == null)
+    {
+        <div class="alert alert-warning border-0 shadow-sm">
+            Nie znaleziono wiadomości.
+        </div>
+    }
+    else
+    {
+        <div class="card shadow-lg">
+            <div class="card-header bg-gradient-success border-0">
+                <div class="d-flex justify-content-between align-items-center">
+                    <small class="badge bg-light text-dark">📅 @FormatPolandTime(message.CreatedAt)</small>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="response-section mb-4">
+                    <h6 class="text-muted fw-bold text-uppercase">📌 Pytanie</h6>
+                    <div class="question-box">@message.Question</div>
+                </div>
+
+                <div class="response-section mb-4">
+                    <h6 class="text-muted fw-bold text-uppercase">💡 Odpowiedź</h6>
+                    <div class="answer-box">@RenderAnswer(message.Answer)</div>
+                </div>
+
+                <div class="alert alert-success border-0 shadow-sm">
+                    <strong>Liczba iteracji:</strong>
+                    <span class="badge bg-success ms-2">@message.IterationCount</span>
+                </div>
+
+                @if (message.Answer?.Contains("[Agent Log]") == true)
+                {
+                    <div class="card mt-4 agent-log-card">
+                        <div class="card-header bg-dark text-white border-0">
+                            <h6 class="mb-0">🔍 Log agentów</h6>
+                        </div>
+                        <div class="card-body agent-log-body">
+                            <pre style="background-color: #1e1e1e; color: #d4d4d4; padding: 15px; border-radius: 6px; font-size: 12px; max-height: 350px; overflow-y: auto; font-family: 'Courier New', monospace;">@{
+                                var logPart = message.Answer?.Split("\n---\n[Agent Log]\n");
+                                if (logPart?.Length > 1)
+                                {
+                                    @logPart[1]
+                                }
+                            }</pre>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+
+    <div class="mt-4">
+        <NavLink class="btn btn-outline-primary" href="/history">← Wróć do historii</NavLink>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private ChatMessage? message;
+    private bool isLoaded;
+
+    private static readonly TimeZoneInfo PolandTimeZone = GetPolandTimeZone();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        message = await ChatService.GetMessageByIdAsync(Id);
+        isLoaded = true;
+    }
+
+    private static TimeZoneInfo GetPolandTimeZone()
+    {
+        try
+        {
+            return TimeZoneInfo.FindSystemTimeZoneById("Europe/Warsaw");
+        }
+        catch
+        {
+            return TimeZoneInfo.FindSystemTimeZoneById("Central European Standard Time");
+        }
+    }
+
+    private static string FormatPolandTime(DateTime dateTime)
+    {
+        var utcTime = dateTime.Kind == DateTimeKind.Utc
+            ? dateTime
+            : DateTime.SpecifyKind(dateTime, DateTimeKind.Utc);
+
+        var localTime = TimeZoneInfo.ConvertTimeFromUtc(utcTime, PolandTimeZone);
+        return localTime.ToString("dd.MM.yyyy HH:mm");
+    }
+
+    private static MarkupString RenderAnswer(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return new MarkupString(string.Empty);
+        }
+
+        var content = text.Split("\n---")[0].Replace("\r\n", "\n");
+        var regex = new Regex(@"\[(?<label>[^\]]+)\]\(/products/(?<id>\d+)\)", RegexOptions.Compiled);
+
+        var sb = new StringBuilder();
+        var lastIndex = 0;
+
+        foreach (Match match in regex.Matches(content))
+        {
+            if (match.Index > lastIndex)
+            {
+                var chunk = content.Substring(lastIndex, match.Index - lastIndex);
+                sb.Append(WebUtility.HtmlEncode(chunk));
+            }
+
+            var label = WebUtility.HtmlEncode(match.Groups["label"].Value);
+            var id = match.Groups["id"].Value;
+            sb.Append($"<a href=\"/products/{id}\">{label}</a>");
+
+            lastIndex = match.Index + match.Length;
+        }
+
+        if (lastIndex < content.Length)
+        {
+            sb.Append(WebUtility.HtmlEncode(content.Substring(lastIndex)));
+        }
+
+        var html = sb.ToString().Replace("\n", "<br />");
+        return new MarkupString(html);
+    }
+}

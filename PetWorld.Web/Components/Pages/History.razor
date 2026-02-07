@@ -1,0 +1,123 @@
+@page "/history"
+@rendermode InteractiveServer
+@using PetWorld.Application.Services
+@using PetWorld.Domain.Entities
+@inject IChatService ChatService
+
+<div class="container mt-4 mb-4">
+    <div class="page-header-section mb-5">
+        <h1 class="display-5 fw-bold">📜 Historia konwersacji</h1>
+        <p class="lead text-muted">Przeglądaj wszystkie poprzednie rozmowy z naszym asystentem</p>
+    </div>
+    
+    @if (messages == null)
+    {
+        <div class="alert alert-info border-0 shadow-sm">
+            <span class="spinner-border spinner-border-sm me-2"></span>
+            <span>Ładowanie historii...</span>
+        </div>
+    }
+    else if (messages.Count == 0)
+    {
+        <div class="alert alert-warning border-0 shadow-sm text-center py-5">
+            <span style="font-size: 2em; display: block; margin-bottom: 10px;">📭</span>
+            <span>Historia jest pusta. Przejdź do chatu, aby zadać pytanie!</span>
+        </div>
+    }
+    else
+    {
+        <div class="history-summary mb-4 p-3 bg-light rounded-3 border">
+            <div class="row text-center">
+                <div class="col-md-4">
+                    <h6 class="text-muted mb-1">Całkowita liczba pytań</h6>
+                    <h4 class="text-primary fw-bold">@messages.Count</h4>
+                </div>
+                <div class="col-md-4">
+                    <h6 class="text-muted mb-1">Średnia iteracji</h6>
+                    <h4 class="text-success fw-bold">@Math.Round(messages.Average(m => m.IterationCount), 1)</h4>
+                </div>
+                <div class="col-md-4">
+                    <h6 class="text-muted mb-1">Ostatnia rozmowa</h6>
+                    <h4 class="text-info fw-bold">@FormatPolandTime(messages.Max(m => m.CreatedAt))</h4>
+                </div>
+            </div>
+        </div>
+        
+        <div class="table-responsive">
+            <table class="table table-hover history-table">
+                <thead class="table-dark">
+                    <tr>
+                        <th>📅 Data</th>
+                        <th>❓ Pytanie</th>
+                        <th>✨ Odpowiedź</th>
+                        <th class="text-center">⚙️ Iteracje</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var message in messages.OrderByDescending(m => m.CreatedAt))
+                    {
+                        <tr class="history-row">
+                            <td class="text-nowrap">
+                                <small class="text-muted fw-500">@FormatPolandTime(message.CreatedAt)</small>
+                            </td>
+                            <td>
+                                <NavLink class="text-decoration-none question-preview" href="@($"/history/{message.Id}")">
+                                    @message.Question
+                                </NavLink>
+                            </td>
+                            <td>
+                                <NavLink class="text-decoration-none answer-preview" href="@($"/history/{message.Id}")">
+                                    @message.Answer?.Split("\n---")[0]
+                                </NavLink>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-primary rounded-pill fs-6">@message.IterationCount</span>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+@code {
+    private List<ChatMessage>? messages;
+
+    private static readonly TimeZoneInfo PolandTimeZone = GetPolandTimeZone();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            messages = await ChatService.GetAllMessagesAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd: {ex.Message}");
+            messages = new List<ChatMessage>();
+        }
+    }
+
+    private static TimeZoneInfo GetPolandTimeZone()
+    {
+        try
+        {
+            return TimeZoneInfo.FindSystemTimeZoneById("Europe/Warsaw");
+        }
+        catch (TimeZoneNotFoundException)
+        {
+            return TimeZoneInfo.FindSystemTimeZoneById("Central European Standard Time");
+        }
+    }
+
+    private static string FormatPolandTime(DateTime dateTime)
+    {
+        var utc = dateTime.Kind == DateTimeKind.Utc
+            ? dateTime
+            : DateTime.SpecifyKind(dateTime, DateTimeKind.Utc);
+
+        var local = TimeZoneInfo.ConvertTimeFromUtc(utc, PolandTimeZone);
+        return local.ToString("dd.MM.yyyy HH:mm:ss");
+    }
+}
